@@ -1,2 +1,0 @@
-position_parsing
--DCATKIN_DEVEL_PREFIX=/home/kristian/DroneCage/droneCage_ws/devel -DCMAKE_INSTALL_PREFIX=/home/kristian/DroneCage/droneCage_ws/install -G Unix Makefiles
