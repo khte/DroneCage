@@ -30,3 +30,17 @@
 import rospy
 import serial
 
+class ROSnode():
+	def __init__self():
+		rospy.loginfo(rospy.get_name() + ": Start")
+		
+		#Position conversion class
+		self.uc = utmconv()
+		
+		#Center positions
+		self.zeroEasting = 590734.045671
+		self.zeroNorthing = 6136563.68892
+		
+		#Serial communications
+		self.serialIn = serial.Serial(port = "/dev/ttyUSB1", baudrate = 57600)
+		self.serialOut = serial.Serial(port = "/dev/ttyUSB2", baudrate = 57600)
