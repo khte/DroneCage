@@ -1,0 +1,8 @@
+prefix=/home/kristian/DroneCage/droneCage_ws/devel
+
+Name: position_parsing
+Description: Description of position_parsing
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/kristian/DroneCage/droneCage_ws/devel/lib 
+Requires: 

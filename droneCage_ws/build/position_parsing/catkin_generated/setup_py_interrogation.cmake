@@ -1,0 +1,6 @@
+set(position_parsing_SETUP_PY_VERSION "0.0.0")
+set(position_parsing_SETUP_PY_SCRIPTS "src/position_parser_node.py")
+set(position_parsing_SETUP_PY_PACKAGES "")
+set(position_parsing_SETUP_PY_PACKAGE_DIRS "")
+set(position_parsing_SETUP_PY_MODULES "")
+set(position_parsing_SETUP_PY_MODULE_DIRS "")
