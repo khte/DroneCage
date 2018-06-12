@@ -376,7 +376,7 @@ void loop_run(void)
   /* read current input */
   read_inputs();
 
-    if(Serial.available() > 6){
+    if(Serial.available() > 0){
 
     char ch = Serial.read();
     if(ch == 'P'){
@@ -386,6 +386,19 @@ void loop_run(void)
       cmd[3] = Serial.parseInt();
       cmd[4] = Serial.parseInt();
       cmd[5] = Serial.parseInt();
+
+      if(cmd[0] == -1)
+        cmd[0] = 100;
+      if(cmd[1] == -1)
+        cmd[1] = 100;
+      if(cmd[2] == -1)
+        cmd[2] = 100;
+      if(cmd[3] == -1)
+        cmd[3] = 100;
+      if(cmd[4] == -1)
+        cmd[4] = 100;
+      if(cmd[5] == -1)
+        cmd[5] = 100;
       }
     }
 
