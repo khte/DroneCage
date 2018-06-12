@@ -46,7 +46,7 @@ class ROSnode():
         self.offsetAxis(x_axis=0, y_axis=0, z_axis=0)
 
         # print list of all positions
-        self.saveWaypointsToCSV(waypoints=self.waypoint_list, filename='eights')
+        # self.saveWaypointsToCSV(waypoints=self.waypoint_list, filename='eights')
 
         # run pattern, will repeat running pattern aslong as program is running
         self.runPattern()
