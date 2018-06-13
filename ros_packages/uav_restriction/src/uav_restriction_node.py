@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Descriptors: TL = Tobias Lundby (tobiaslundby@gmail.com)
+Descriptors: TL = Tobias Lundby (tobiaslundby@gmail.com), FMA = Frederik Mazur Andersen (mazurandersen@gmail.com)
 2018-06-04 TL First version
+2018-06-13 FMA change lowest value sending to transmitter is 1. Can not send 0.
 """
 
 import rospy
@@ -94,7 +95,7 @@ class uav_restriction():
                 r = rospy.Rate(0.5) # 10hz
                 while not rospy.is_shutdown():
                     rospy.loginfo('Sending')
-                    self.send_arduino_message(10,20,30,40,50,60)
+                    self.send_arduino_message(0,20,30,40,50,60)
                     r.sleep()
 
             rospy.Subscriber(ROS_POSE_TOPIC, mavlink_lora_pos, self.callback_pos)
@@ -114,7 +115,7 @@ class uav_restriction():
             try:
                 #self.ser_arduino.write(values)
                 #self.ser_arduino.write('P %d %d %d %d %d %d' % (thr_high, thr_low, pitch_high, pitch_low, roll_high, roll_low))
-                self.ser_arduino.write(struct.pack('>BBBBBB',thr_high,thr_low,pitch_high,pitch_low,roll_high,roll_low))
+                self.ser_arduino.write(struct.pack('>6B',thr_high+1,thr_low+1,pitch_high+1,pitch_low+1,roll_high+1,roll_low+1))
             except serial.SerialException as e:
                 rospy.logerr('Could not write to arduino')
                 return False
