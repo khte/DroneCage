@@ -109,9 +109,3 @@ if __name__ == '__main__':
 		node_class = ROSnode()
 	except rospy.ROSInterruptException:
 		pass
-		
-		
-	
-	
-		
-
