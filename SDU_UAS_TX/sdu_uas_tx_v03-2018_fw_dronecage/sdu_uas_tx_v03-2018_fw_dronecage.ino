@@ -421,18 +421,18 @@ void loop_run(void)
       const byte numBytes = 6;
       byte Buffer[numBytes];
 
-      int byteCount = Serial.readBytesUntil('\0',Buffer,sizeof(Buffer));
-
+      int byteCount = Serial.readBytesUntil('\0', Buffer, sizeof(Buffer));
+      
       if(byteCount == 6){
-        cmd[0] = Buffer[0];
-        cmd[1] = Buffer[1];
-        cmd[2] = Buffer[2];
-        cmd[3] = Buffer[3];
-        cmd[4] = Buffer[4];
-        cmd[5] = Buffer[5];
-      }      
+        cmd[0] = Buffer[0]-1;
+        cmd[1] = Buffer[1]-1;
+        cmd[2] = Buffer[2]-1;
+        cmd[3] = Buffer[3]-1;
+        cmd[4] = Buffer[4]-1;
+        cmd[5] = Buffer[5]-1;
+        digitalWrite(LED_BUILTIN, HIGH);
+      }
     }
-    
 
   /* set red led according to battery voltage */
   if (batt_volt <= 70)
