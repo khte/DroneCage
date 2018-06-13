@@ -38,7 +38,7 @@ Revision
 ****************************************************************************/
 /* parameters */
 
-#define DEBUG_TO_SERIAL
+//#define DEBUG_TO_SERIAL
 #define FIRMWARE_VERSION "v2018-06-06"
 
 /* #define DEBUG_LED_ONBOARD_RED_SAME */
@@ -430,7 +430,6 @@ void loop_run(void)
         cmd[3] = Buffer[3]-1;
         cmd[4] = Buffer[4]-1;
         cmd[5] = Buffer[5]-1;
-        digitalWrite(LED_BUILTIN, HIGH);
       }
     }
 
@@ -510,7 +509,13 @@ void loop_run(void)
       ppm[0] = (1500 + (uint32_t) 350 * ((input_left_y) - input_left_y_neutral) / (input_left_y_max - input_left_y_neutral));
     }
     else{
-      input_left_y = input_left_y_neutral - ((input_left_y_neutral - input_left_y) * cmd[1]/100);
+      if (input_right_2_pos_sw == false){
+        input_left_y = input_left_y_neutral - ((input_left_y_neutral - input_left_y) * cmd[1]/100);       
+      }
+      else{
+        input_left_y = input_left_y_neutral - (input_left_y_neutral - input_left_y);
+      }
+            
       ppm[0] = (1500 - (uint32_t) 350 * (input_left_y_neutral - (input_left_y)) / (input_left_y_neutral - input_left_y_min));
     }
 
@@ -578,15 +583,16 @@ void loop_run(void)
 
 
 
-  if(ppm[1] > 1600)
+  if(ppm[0] > 1600 || ppm[0] < 1151)
+    digitalWrite(LED_BUILTIN, HIGH);
+  else if(ppm[1] > 1600 || ppm[1] < 1400)
+    digitalWrite(LED_BUILTIN, HIGH);
+  else if(ppm[2] > 1600 || ppm[2] < 1400)
     digitalWrite(LED_BUILTIN, HIGH);
   else
     digitalWrite(LED_BUILTIN, LOW);
 
-  if(ppm[2] > 1600)
-    digitalWrite(LED_BUILTIN, HIGH);
-  else
-    digitalWrite(LED_BUILTIN, LOW);
+    
   unsigned long currentTime = millis();
   unsigned long elapsedTime = elapsedTime - currentTime;
 
