@@ -38,7 +38,7 @@ Revision
 ****************************************************************************/
 /* parameters */
 
-/*#define DEBUG_TO_SERIAL*/
+#define DEBUG_TO_SERIAL
 #define FIRMWARE_VERSION "v2018-06-06"
 
 /* #define DEBUG_LED_ONBOARD_RED_SAME */
@@ -161,10 +161,16 @@ unsigned long ser_debug_next;
 /* dronecage */
 
 uint16_t cmd[6];
+uint16_t cmd_old[6];
 
+uint16_t thr_high;
+uint16_t thr_low;
+uint16_t pitch_high;
+uint16_t pitch_low;
+uint16_t roll_high;
+uint16_t roll_low;
 
-
-
+boolean first_time;
 
 
 /****************************************************************************/
@@ -321,6 +327,12 @@ void led_update(void)
   }
 }
 /****************************************************************************/
+void serialFlush(){
+  while(Serial.available()){
+    char tmp = Serial.read();
+  }
+}
+/****************************************************************************/
 void reset_leds (void)
 {
   /* turn off all LED pins */
@@ -373,34 +385,54 @@ void setup_run(void)
 /****************************************************************************/
 void loop_run(void)
 {
+  unsigned long startTime = millis();
   /* read current input */
   read_inputs();
 
     if(Serial.available() > 0){
-
-    char ch = Serial.read();
+    
+    /*char ch = Serial.read();
     if(ch == 'P'){
-      cmd[0] = Serial.parseInt();
-      cmd[1] = Serial.parseInt();
-      cmd[2] = Serial.parseInt();
-      cmd[3] = Serial.parseInt();
-      cmd[4] = Serial.parseInt();
-      cmd[5] = Serial.parseInt();
+      cmd[0] = Serial.parseInt();//Serial.read() + 0;
+      cmd[1] = Serial.parseInt();//Serial.read() + 0;
+      cmd[2] = Serial.parseInt();//Serial.read() + 0;
+      cmd[3] = Serial.parseInt();//Serial.read() + 0;
+      cmd[4] = Serial.parseInt();//Serial.read() + 0;
+      cmd[5] = Serial.parseInt();//Serial.read() + 0;
+
+      
 
       if(cmd[0] == -1)
-        cmd[0] = 100;
+        cmd[0] = cmd_old[0];
       if(cmd[1] == -1)
-        cmd[1] = 100;
+        cmd[1] = cmd_old[1];
       if(cmd[2] == -1)
-        cmd[2] = 100;
+        cmd[2] = cmd_old[2];
       if(cmd[3] == -1)
-        cmd[3] = 100;
+        cmd[3] = cmd_old[3];
       if(cmd[4] == -1)
-        cmd[4] = 100;
+        cmd[4] = cmd_old[4];
       if(cmd[5] == -1)
-        cmd[5] = 100;
-      }
+        cmd[5] = cmd_old[5];
+
+        serialFlush();
+      }*/
+
+      const byte numBytes = 6;
+      byte Buffer[numBytes];
+
+      int byteCount = Serial.readBytesUntil('\0',Buffer,sizeof(Buffer));
+
+      if(byteCount == 6){
+        cmd[0] = Buffer[0];
+        cmd[1] = Buffer[1];
+        cmd[2] = Buffer[2];
+        cmd[3] = Buffer[3];
+        cmd[4] = Buffer[4];
+        cmd[5] = Buffer[5];
+      }      
     }
+    
 
   /* set red led according to battery voltage */
   if (batt_volt <= 70)
@@ -412,7 +444,7 @@ void loop_run(void)
     led_red_signal = 0;
 
   }
-  
+
   /* limit input to calibrated minimum and maximum */
   if (input_left_y > input_left_y_max)
     input_left_y = input_left_y_max;
@@ -462,11 +494,11 @@ void loop_run(void)
     else
       ppm[2] = 1500 - (uint32_t) 350 * (input_right_y_neutral - input_right_y) / (input_right_y_neutral - input_right_y_min);
 
-    // unused for now 
+    // unused for now
     ppm[4] = DEFAULT_SERVO_VALUE;
     ppm[5] = DEFAULT_SERVO_VALUE;
     ppm[6] = DEFAULT_SERVO_VALUE;
-    ppm[7] = DEFAULT_SERVO_VALUE;  
+    ppm[7] = DEFAULT_SERVO_VALUE;
   } /* end CRRCsim TX */
 
   /* AutoQuad TX */
@@ -492,12 +524,12 @@ void loop_run(void)
     if (ppm[0] < 1300)
     {
       if (ppm[3] > 1700) /* arm */
-      { 
+      {
         ppm[0] = 1150;
         ppm[3] = 1850;
       }
       else if (ppm[3] < 1300) /* disarm */
-      { 
+      {
         ppm[0] = 1150;
         ppm[3] = 1150;
       }
@@ -539,18 +571,25 @@ void loop_run(void)
     else
       ppm[6] = 1850;
 
-    // unused for now 
+    // unused for now
     ppm[4] = DEFAULT_SERVO_VALUE;
-    ppm[7] = DEFAULT_SERVO_VALUE;  
+    ppm[7] = DEFAULT_SERVO_VALUE;
   } /* end AutoQuad TX */
 
 
 
-  if(ppm[0] > 1700)
+  if(ppm[1] > 1600)
     digitalWrite(LED_BUILTIN, HIGH);
   else
     digitalWrite(LED_BUILTIN, LOW);
-    
+
+  if(ppm[2] > 1600)
+    digitalWrite(LED_BUILTIN, HIGH);
+  else
+    digitalWrite(LED_BUILTIN, LOW);
+  unsigned long currentTime = millis();
+  unsigned long elapsedTime = elapsedTime - currentTime;
+
   #ifdef DEBUG_TO_SERIAL
     if(time_ms >= ser_debug_next)
     {
@@ -574,8 +613,15 @@ void loop_run(void)
       Serial.print ("  Battery: ");
       Serial.print (batt_volt);
       Serial.println (" Volt*10");
+      Serial.print("Elapsed Time: ");
+      Serial.print(elapsedTime);
+      Serial.println();
     }
   #endif
+      
+
+
+      //serialFlush();
 }
 /****************************************************************************/
 void setup_cal_neutral_left(void)
@@ -741,13 +787,21 @@ void loop_cal_minmax(void)
 /****************************************************************************/
 void setup()
 { 
-
+  first_time = true; // used for first time remapping
   cmd[0] = 100;
   cmd[1] = 100;
   cmd[2] = 100;
   cmd[3] = 100;
   cmd[4] = 100;
   cmd[5] = 100;
+  cmd_old[0] = 100;
+  cmd_old[1] = 100;
+  cmd_old[2] = 100;
+  cmd_old[3] = 100;
+  cmd_old[4] = 100;
+  cmd_old[5] = 100;
+
+
   pinMode(LED_BUILTIN, OUTPUT);
   // setup digital output pins
   pinMode(LED_BUILTIN, OUTPUT); 
