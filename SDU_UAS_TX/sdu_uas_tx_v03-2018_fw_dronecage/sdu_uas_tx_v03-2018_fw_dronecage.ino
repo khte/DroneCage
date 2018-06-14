@@ -38,7 +38,7 @@
 ****************************************************************************/
 /* parameters */
 
-//#define DEBUG_TO_SERIAL
+#define DEBUG_TO_SERIAL
 #define FIRMWARE_VERSION "v2018-06-06"
 
 /* #define DEBUG_LED_ONBOARD_RED_SAME */
@@ -418,18 +418,20 @@ void loop_run(void)
         serialFlush();
       }*/
 
-    const byte numBytes = 6;
+    const byte numBytes = 7;
     byte Buffer[numBytes];
 
     int byteCount = Serial.readBytesUntil('\0', Buffer, sizeof(Buffer));
 
-    if (byteCount == 6) {
-      cmd[0] = Buffer[0] - 1;
-      cmd[1] = Buffer[1] - 1;
-      cmd[2] = Buffer[2] - 1;
-      cmd[3] = Buffer[3] - 1;
-      cmd[4] = Buffer[4] - 1;
-      cmd[5] = Buffer[5] - 1;
+    if (byteCount == 7) {
+      if(Buffer[0] == 102 && Buffer[1] <= 101 || Buffer[1] >= 1 && Buffer[2] <= 101 || Buffer[2] >= 1 && Buffer[3] <= 101 || Buffer[3] >= 1 && Buffer[4] <= 101 || Buffer[4] >= 1 && Buffer[5] <= 101 || Buffer[5] >= 1 && Buffer[6] <= 101 || Buffer[6] >= 1){
+        cmd[0] = Buffer[1] - 1;
+        cmd[1] = Buffer[2] - 1;
+        cmd[2] = Buffer[3] - 1;
+        cmd[3] = Buffer[4] - 1;
+        cmd[4] = Buffer[5] - 1;
+        cmd[5] = Buffer[6] - 1;
+      }  
     }
   }
 
