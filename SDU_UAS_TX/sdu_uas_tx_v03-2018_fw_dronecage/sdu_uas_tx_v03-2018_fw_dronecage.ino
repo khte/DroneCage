@@ -424,17 +424,18 @@ void loop_run(void)
     int byteCount = Serial.readBytesUntil('\0', Buffer, sizeof(Buffer));
 
     if (byteCount == 7) {
-      if(Buffer[0] == 102 && Buffer[1] <= 101 || Buffer[1] >= 1 && Buffer[2] <= 101 || Buffer[2] >= 1 && Buffer[3] <= 101 || Buffer[3] >= 1 && Buffer[4] <= 101 || Buffer[4] >= 1 && Buffer[5] <= 101 || Buffer[5] >= 1 && Buffer[6] <= 101 || Buffer[6] >= 1){
+      if(Buffer[0] == 102 && Buffer[1] <= 101 && Buffer[1] >= 1 && Buffer[2] <= 101 && Buffer[2] >= 1 && Buffer[3] <= 101 && Buffer[3] >= 1 && Buffer[4] <= 101 && Buffer[4] >= 1 && Buffer[5] <= 101 && Buffer[5] >= 1 && Buffer[6] <= 101 && Buffer[6] >= 1){
         cmd[0] = Buffer[1] - 1;
         cmd[1] = Buffer[2] - 1;
         cmd[2] = Buffer[3] - 1;
         cmd[3] = Buffer[4] - 1;
         cmd[4] = Buffer[5] - 1;
         cmd[5] = Buffer[6] - 1;
+        
       }  
     }
   }
-
+   
   /* set red led according to battery voltage */
   if (batt_volt <= 70)
     led_red_signal = 2;
@@ -670,8 +671,8 @@ void loop_run(void)
     Serial.print ("  Battery: ");
     Serial.print (batt_volt);
     Serial.println (" Volt*10");
-    Serial.print("Elapsed Time: ");
-    Serial.print(elapsedTime);
+    Serial.print("CMD: ");
+    Serial.println(cmd[1]);
     Serial.println();
   }
 #endif
