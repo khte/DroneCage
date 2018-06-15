@@ -27,23 +27,45 @@
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ******************************************************************************
 */
-#define BAUDDEBUG 9600
+#define BAUDDEBUG 115200
 #define BAUDPOS 57600
 #define BAUDAQ 230400  //AQ required baud rate
-#define MESSAGE_SIZE 100  //Size of message container MAKE SMALLER
+#define MESSAGE_SIZE 15  //Size of message container MAKE SMALLER
 
 #define DEFAULT_ACCURACY 50//2900//500  //Will be variable at a later stage
 #define DEFAULT_DOP 100//100  //Will be variable at a later stage
 
+#define MSG_IN_LEN 15
+#define MSG_IN_START_CHAR 'p'
 
-char receivedMessage[MESSAGE_SIZE];
+extern "C"{
+   #include "crc.h"
+}
+
+// variables related to receiveMessage()
+unsigned char receivedMessage[MESSAGE_SIZE];
 boolean newMessage = false;
+
+// variables related to validateMessage()k
+crc crcdata;
+unsigned char crc_low, crc_high;
+char result;
+
+// variables related to extactMessage()
+long *longptr;
 long latitude = 0;
 long longitude = 0;
 long altitude = 0;
 long oldLatitude = 0;
 long oldLongitude = 0;
 long positionHack = 2;
+
+// variables related to transmitMessage()
+unsigned char dop_tx_cnt;
+
+// other stuff (not sorted yet)
+
+int grnLedPin = 2;
 
 int counter = 0;
 
@@ -52,7 +74,10 @@ byte NAV_POSLLH[] = {0xB5, 0x62, 0x01, 0x02, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00,
 byte NAV_DOP[] = {0xB5, 0x62, 0x01, 0x04, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 void setup(){
-  delay(10000);
+  //delay(10000);
+
+  pinMode(grnLedPin, OUTPUT);
+  crcInit(); /* initialize CRC checksum */
   
   //Serial.begin(BAUDDEBUG); ///////DEBUG
   Serial1.begin(BAUDPOS);
@@ -62,60 +87,183 @@ void setup(){
   //Set default accuracies
   byteSplit(&NAV_POSLLH[26], DEFAULT_ACCURACY, 4);
   byteSplit(&NAV_POSLLH[30], DEFAULT_ACCURACY, 4);
-  checksum(&NAV_POSLLH[2], sizeof(NAV_POSLLH) - 4);
+  ubxChecksum(&NAV_POSLLH[2], sizeof(NAV_POSLLH) - 4);
   //Set default DOPs
   for(int i = 10; i < 24; i = i + 2){
     byteSplit(&NAV_DOP[i], DEFAULT_DOP, 2);
   }
-  checksum(&NAV_DOP[2], sizeof(NAV_DOP) - 4);
+  ubxChecksum(&NAV_DOP[2], sizeof(NAV_DOP) - 4);
 }
 
-void loop(){
-  receiveMessage();
-  parseNMEA();
-  //messageTiming();
-}
-
-////////////////////RECEIVING////////////////////
-void receiveMessage(){
-  static boolean receiving = false;
-  static byte index = 0;
-  char startChar = '$';
-  char endChar = '\n';
-  char readData;
-  
-  while(Serial1.available() > 0 && newMessage == false){
-    readData = Serial1.read();
-    //Serial.write(readData);
-    if(receiving == true){
-      if(readData != endChar){
-        receivedMessage[index] = readData;
-        index++;
-        if(index >= MESSAGE_SIZE){
-          index = MESSAGE_SIZE - 1;
-        }
-      }
-      else{
-        receivedMessage[index] = '\0';
-        receiving = false;
-        index = 0;
-        newMessage = true;
-      }
-    }
-    else if(readData == startChar){
-      receiving = true;
-    }
+void loop()
+{
+  newMessage = false;
+  while (newMessage == false)
+    receiveMessage();
+  if (validateMessage())
+  {    
+    extractMessage();
+    forwardMessage();
   }
 }
 
-void parseNMEA(){
+////////////////////RECEIVING////////////////////
+
+unsigned char cnt;
+boolean receiving;
+unsigned long tout;
+byte readData;
+
+void receiveMessage()
+{
+  receiving = false;
+  cnt = 0;
+  tout = millis() + 1000;
+  //Serial.println ("receiving");
+
+  while(millis() < tout && newMessage == false)
+  {
+    if (Serial1.available() > 0) 
+    {
+      readData = Serial1.read();
+      if(receiving == true)
+      {
+        receivedMessage[cnt++] = readData;
+        if(cnt == MSG_IN_LEN)
+        {
+          newMessage = true;
+          receiving = false;
+        }
+      }  
+      else if(readData == MSG_IN_START_CHAR)
+      {
+        cnt = 0;
+        receiving = true;
+        receivedMessage[cnt++] = readData;
+      }
+    }
+  }
+  //Serial.print ("received ");
+  //Serial.println (cnt);  
+}
+////////////////////VALIDATING////////////////////
+char validateMessage()
+{
+  // we already know that the lenght is MSG_IN_LEN and that the first char is MSG_IN_START_CHAR 
+
+  //Serial.print ("validate ");
+
+  /* calculate crc */
+  crcdata = crcFast(receivedMessage, MSG_IN_LEN - 2);
+  /*
+  Serial.print (receivedMessage[0]);
+  Serial.print ("   ");
+  Serial.print (receivedMessage[1]);
+  Serial.print (" ");
+  Serial.print (receivedMessage[2]);
+  Serial.print (" ");
+  Serial.print (receivedMessage[3]);
+  Serial.print (" ");
+  Serial.print (receivedMessage[4]);
+  Serial.print ("  ");
+  Serial.print (receivedMessage[5]);
+  Serial.print (" ");
+  Serial.print (receivedMessage[6]);
+  Serial.print (" ");
+  Serial.print (receivedMessage[7]);
+  Serial.print (" ");
+  Serial.print (receivedMessage[8]);
+  Serial.print ("  ");
+  Serial.print (receivedMessage[9]);
+  Serial.print (" ");
+  Serial.print (receivedMessage[10]);
+  Serial.print (" ");
+  Serial.print (receivedMessage[11]);
+  Serial.print (" ");
+  Serial.print (receivedMessage[12]);
+  Serial.print ("  ");
+  Serial.print (receivedMessage[13]);
+  Serial.print (" ");
+  Serial.print (receivedMessage[14]);
+  */
+  
+  crc_low = crcdata >> 8;
+  crc_high = crcdata & 0x00ff;
+
+  /*
+  Serial.print (" ");
+  Serial.print (crc_low);
+  Serial.print (" ");
+  Serial.print (crc_high);
+
+  Serial.println ("");
+  */
+  
+  /* check against transmitted crc */
+  if (crc_low == receivedMessage[MSG_IN_LEN - 2] && crc_high == receivedMessage[MSG_IN_LEN - 1])
+    result = true;
+  else
+    result = false;
+
+  return result;
+}
+////////////////////EXTRACTING////////////////////
+char extractMessage()
+{
+  result = false;
+
+  // we can safely assume that the length is 1
+  longptr = (long *) (receivedMessage + 1);
+  latitude = *longptr;
+  longptr = (long *) (receivedMessage + 5);
+  longitude = *longptr;
+  longptr = (long *) (receivedMessage + 9);
+  altitude = *longptr;
+  
+  //Workaround due to AQ's handling of a uBlox error, where the module sends the same position multiple times.
+  if(latitude == oldLatitude && longitude == oldLongitude)
+  {
+    positionHack = -positionHack;
+    latitude += positionHack;
+    oldLatitude = latitude;
+  }
+  else{
+    oldLatitude = latitude;
+    oldLongitude = longitude;
+  }
+}
+
+////////////////////TRANSMITTING////////////////////
+void forwardMessage()
+{
+  //Takes latitude and longitude with a scaling factor of 1e7, altitude in millimeters and updates the UBX position message
+  byteSplit(&NAV_POSLLH[10], longitude, 4);
+  byteSplit(&NAV_POSLLH[14], latitude, 4);
+  //byteSplit(&NAV_POSLLH[18], altitude, 4); //TEST IGNORING THE HEIGHT ABOVE ELLIPSOID
+  byteSplit(&NAV_POSLLH[22], altitude, 4);
+  ubxChecksum(&NAV_POSLLH[2], sizeof(NAV_POSLLH)-4);
+
+  sendUBXMessage(&NAV_POSLLH[0], sizeof(NAV_POSLLH));
+  if(dop_tx_cnt++ > 50)
+  {
+    sendUBXMessage(&NAV_DOP[0], sizeof(NAV_DOP));
+    dop_tx_cnt = 0;
+  }
+}
+
+////////////////////UNUSED////////////////////
+
+void parseNMEA()
+{
   static char posMSG[] = "GGA";
   char temp[10] = {0};
-  if(newMessage == true){
+  if(newMessage == true)
+  {
     //NMEAchecksumCalculator();
     char* strtokIndex;
     strtokIndex = strtok(receivedMessage, ",");
-    if(posMSG[0] == strtokIndex[0] && posMSG[1] == strtokIndex[1] && posMSG[2] == strtokIndex[2]){
+    if(posMSG[0] == strtokIndex[0] && posMSG[1] == strtokIndex[1] && posMSG[2] == strtokIndex[2])
+    {
       parseGGAData(strtokIndex);
     }
     newMessage = false;
@@ -155,28 +303,9 @@ void parseGGAData(char* index){
   */  
 }
 
-/*
-void NMEAchecksumCalculator(){
-  byte start = 0;
-  byte endit = 0;
-  byte CRC = 0;
-  for(int i = 0; i < strlen(receivedMessage); i++){
-    if(receivedMessage[i] == '*'){
-      endit = i;
-    }
-  }
-  for(byte x = start; x < endit; x++){
-    CRC = CRC ^ receivedMessage[x];
-  }
-  //Serial.println(CRC, HEX);
- // return 1;
-}
-*/
 
-
-////////////////////TRANSMITTING////////////////////
 //Takes a UBX message and the payload size and calculates the checksum for a UBX message
-void checksum(byte *messagePayload, int payloadSize){
+void ubxChecksum(byte *messagePayload, int payloadSize){
   byte CK_A = 0, CK_B = 0;
   for(int i = 0; i < payloadSize ;i++){
     CK_A = CK_A + *messagePayload;
@@ -203,7 +332,7 @@ void positionUpdate(){
   byteSplit(&NAV_POSLLH[14], latitude, 4);
   //byteSplit(&NAV_POSLLH[18], altitude, 4); //TEST IGNORING THE HEIGHT ABOVE ELLIPSOID
   byteSplit(&NAV_POSLLH[22], altitude, 4);
-  checksum(&NAV_POSLLH[2], sizeof(NAV_POSLLH)-4);
+  ubxChecksum(&NAV_POSLLH[2], sizeof(NAV_POSLLH)-4);
 }
 
 //Takes a UBX message and its length and sends the message over serial
