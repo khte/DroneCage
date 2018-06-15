@@ -77,7 +77,9 @@ class crc16():
 
 	def calc(self, s):
 		crc=0x0000
-		for ch in s:
-			tmp=crc^(ord(ch))
+		#for ch in s:
+		#	tmp=crc^(ord(ch))
+		for i in range(len(s)):
+			tmp = crc^(s[i])
 			crc=(crc>> 8)^self.crc16lookup[(tmp & 0xff)]
 		return crc
