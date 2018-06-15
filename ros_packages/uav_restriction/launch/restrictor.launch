@@ -1,0 +1,11 @@
+<!-- launch file -->
+
+<launch>
+
+	<node pkg="uav_restriction" type="uav_restriction_node.py" name="uav_restriction_node" respawn="false" output="screen">
+		<param name="serial_device" value="/dev/ttyUSB0"/>
+		<param name="serial_baudrate" value="115200"/>
+		<param name="emulate_arduino_send" value="1"/>
+	</node>
+
+</launch>
